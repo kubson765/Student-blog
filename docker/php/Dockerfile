@@ -6,6 +6,9 @@ ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/do
 RUN chmod +x /usr/local/bin/install-php-extensions && \
     install-php-extensions gd pdo_mysql apcu intl zip bcmath curl opcache xml redis pcntl mbstring fileinfo
 
+# Install Node.js and npm (for Alpine)
+RUN apk add --update nodejs npm
+
 # Instalacja Composera wewnątrz kontenera
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
