@@ -62,6 +62,11 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [LogoutController::class, 'logout'])->name('logout');
 
+    // Delete Account
+    Route::get('delete-account', [App\Http\Controllers\Auth\AccountDeletionController::class, 'edit'])
+        ->name('account.delete');
+    Route::delete('delete-account', [App\Http\Controllers\Auth\AccountDeletionController::class, 'destroy'])
+        ->name('account.destroy');
 
     // Protected routes (require verified email)
     Route::middleware('verified')->group(function () {
