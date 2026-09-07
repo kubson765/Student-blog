@@ -62,18 +62,24 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [LogoutController::class, 'logout'])->name('logout');
 
-    // ✅ Change Password routes (dodaj to!)
-    Route::get('change-password', [App\Http\Controllers\Auth\PasswordChangeController::class, 'edit'])
-        ->name('password.change');
-    Route::post('change-password', [App\Http\Controllers\Auth\PasswordChangeController::class, 'update'])
-        ->name('password.update');
-        
+
     // Protected routes (require verified email)
     Route::middleware('verified')->group(function () {
         Route::get('/dashboard', function () {
             return view('dashboard');
         })->name('dashboard');
         
-        // Add other protected routes here
+    // Change Password
+    Route::get('change-password', [App\Http\Controllers\Auth\PasswordChangeController::class, 'edit'])
+        ->name('password.change');
+    Route::post('change-password', [App\Http\Controllers\Auth\PasswordChangeController::class, 'update'])
+        ->name('password.update');
+
+    // Change email
+    Route::get('change-email', [App\Http\Controllers\Auth\EmailChangeController::class, 'edit'])
+        ->name('email.change');
+    Route::post('change-email', [App\Http\Controllers\Auth\EmailChangeController::class, 'update'])
+        ->name('email.update');
+        
     });
 });
