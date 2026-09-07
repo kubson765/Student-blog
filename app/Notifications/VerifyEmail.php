@@ -16,12 +16,10 @@ class VerifyEmail extends BaseVerifyEmail
 
         return (new MailMessage)
             ->subject('Verify Your Email Address')
-            ->greeting('Hello ' . $notifiable->name . '!')
-            ->line('Thanks for creating an account!')
-            ->line('Please click the button below to verify your email address.')
-            ->action('Verify Email Address', $verificationUrl)
-            ->with(['user' => $notifiable])
-            ->line('If you did not create an account, no further action is required.');
+            ->view('emails.verify-email', [
+                'user' => $notifiable,
+                'verificationUrl' => $verificationUrl,
+            ]); 
     }
 
     protected function verificationUrl($notifiable)

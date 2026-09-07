@@ -16,7 +16,7 @@
                         @endif
 
                         <p class="card-text mb-4">
-                            Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn't receive the email, we'll gladly send you another.
+                            Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn't receive the email, we'll gladly send you another. Note that your account will be removed due to security reasons if you fail to verify it.
                         </p>
 
                         <div class="d-flex flex-wrap gap-3">

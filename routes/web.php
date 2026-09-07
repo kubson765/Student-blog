@@ -6,6 +6,8 @@ use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordResetLinkController; 
+use App\Http\Controllers\Auth\NewPasswordController;
 
 // Public routes
 Route::get('/', function () {
@@ -14,26 +16,34 @@ Route::get('/', function () {
 
 // Guest routes (not logged in)
 Route::middleware('guest')->group(function () {
+    
     Route::get('register', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('register', [RegisteredUserController::class, 'store']);
     
-    // Route::get('login', function () {
-    //     return view('auth.login');
-    // })->name('login');
-    
      Route::get('login', [LoginController::class, 'create'])->name('login');
     Route::post('login', [LoginController::class, 'store']);
+
+    // Formularz "Zapomniałem hasła"
+    Route::get('forgot-password', function () {
+        return view('auth.forgot-password');
+    })->name('password.request');
+
+    // Wysyłanie linku resetu
+    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->name('password.email');
+
+    // Formularz resetu hasła (z tokenem w URL)
+    Route::get('reset-password/{token}', function (string $token) {
+        return view('auth.reset-password', ['token' => $token]);
+    })->name('password.reset');
+
+    // Zapis nowego hasła
+    Route::post('reset-password', [NewPasswordController::class, 'store'])
+        ->name('password.update');
 });
 
 // Authenticated routes (logged in)
 Route::middleware('auth')->group(function () {
-    // ✅ ADD LOGOUT ROUTE
-    Route::post('logout', function (Request $request) {
-        auth()->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return redirect('/');
-    })->name('logout');
     
     // Email verification routes
     Route::get('/email/verify', function () {
@@ -52,6 +62,12 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [LogoutController::class, 'logout'])->name('logout');
 
+    // ✅ Change Password routes (dodaj to!)
+    Route::get('change-password', [App\Http\Controllers\Auth\PasswordChangeController::class, 'edit'])
+        ->name('password.change');
+    Route::post('change-password', [App\Http\Controllers\Auth\PasswordChangeController::class, 'update'])
+        ->name('password.update');
+        
     // Protected routes (require verified email)
     Route::middleware('verified')->group(function () {
         Route::get('/dashboard', function () {

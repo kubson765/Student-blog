@@ -46,9 +46,15 @@
                                 Login
                             </button>
 
-                            <div class="mt-3 text-center">
+                            <div class = "mt-3 text-center">
+                                <a href="{{ route('password.request') }}" class="text-decoration-none text-muted small">
+                                    <i class="bi bi-key me-1"></i>Forgot your password?
+                                </a>
+                            </div>
+
+                            <div class="mt-2 text-center">
                                 <a href="{{ route('register') }}" class="text-decoration-none">
-                                    Don't have an account? Register
+                                    Don't have an account? <strong>Register</strong>
                                 </a>
                             </div>
                         </form>

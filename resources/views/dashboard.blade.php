@@ -46,8 +46,13 @@
                             </div>
                         </div>
                         
-                        <div class="mt-4">
-                            <form method="POST" action="{{ route('logout') }}">
+                        <!-- Przyciski akcji -->
+                        <div class="mt-4 d-flex flex-wrap gap-3">
+                            <a href="{{ route('password.change') }}" class="btn btn-outline-warning">
+                                <i class="bi bi-key me-2"></i>Change Password
+                            </a>
+                            
+                            <form method="POST" action="{{ route('logout') }}" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-outline-danger">
                                     <i class="bi bi-box-arrow-right me-2"></i>Logout
