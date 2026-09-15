@@ -50,6 +50,8 @@ DB_DATABASE=laravel
 DB_USERNAME=root
 DB_PASSWORD=secret
 
+Also keep in mind the mail sanbox configuration. Personally i used Mailtrap
+
 3. Build & Run Docker Containers
 Start the custom Docker containers in detached mode:
 
