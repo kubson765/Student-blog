@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class EmailChangeController extends Controller
 {
@@ -26,24 +26,29 @@ class EmailChangeController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Validation
         $request->validate([
             'current_password' => ['required', 'current_password'],
             'new_email' => ['required', 'email', 'unique:users,email,' . $user->id],
         ]);
 
-        // 2. Update (not verified)
-        $user->update([
-            'email' => $request->new_email,
-            'email_verified_at' => null,
-        ]);
+        try {
+            DB::transaction(function () use ($user, $request) {
+                $user->update([
+                    'email' => $request->new_email,
+                    'email_verified_at' => null,
+                ]);
+            });
 
-        // 3. Verification
-        $user->sendEmailVerificationNotification();
+            // Sned mail after successful transaction
+            $user->sendEmailVerificationNotification();
 
-        // 4. Redirect with a message
-        return redirect()->route('dashboard')->with('status', 
-            'Email address changed! Please verify your new email address.'
-        );
+            return redirect()->route('dashboard')->with(
+                'status',
+                'Email został zmieniony! Sprawdź nową skrzynkę, aby zweryfikować adres.'
+            );
+        } catch (\Exception $e) {
+            Log::error('Email change failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
+            return back()->withErrors(['general' => 'Nie udało się zmienić emaila.']);
+        }
     }
 }

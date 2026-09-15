@@ -23,18 +23,25 @@ class PasswordChangeController extends Controller
      */
     public function update(Request $request): RedirectResponse
     {
-        // 1. Walidacja
         $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
-        // 2. Aktualizacja hasła
-        $request->user()->update([
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            DB::transaction(function () use ($request) {
+                $request->user()->update([
+                    'password' => Hash::make($request->password),
+                ]);
+            }, 5);
 
-        // 3. Przekierowanie z komunikatem
-        return redirect()->route('dashboard')->with('status', 'Password changed successfully!');
+            // Opcjonalnie: powiadomienie email o zmianie hasła
+            // $request->user()->notify(new PasswordChangedNotification());
+
+            return redirect()->route('dashboard')->with('status', 'Hasło zostało zmienione!');
+        } catch (\Exception $e) {
+            Log::error('Password change failed', ['error' => $e->getMessage()]);
+            return back()->withErrors(['general' => 'Nie udało się zmienić hasła.']);
+        }
     }
 }

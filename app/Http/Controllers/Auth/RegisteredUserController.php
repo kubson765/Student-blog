@@ -9,6 +9,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -23,21 +25,32 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            $user = DB::transaction(function () use ($request) {
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                ]);
+
+                return $user;
+            });
+
+            event(new Registered($user));
+            Auth::login($user);
+
+            return redirect()->routde('verification.notice');
+        } catch (\Exception $e) {
+            Log::error('Registration failed', ['error' => $e->getMessage()]);
+            return back()->withInput()->withErrors(['general' => 'Registration failed. Please try again']);
+        }
 
         // Fire Registered event to send verification email
-        event(new Registered($user));
 
-        Auth::login($user);
 
-        return redirect()->route('verification.notice');
     }
 }

@@ -1,46 +1,6 @@
-{{-- <!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'Blog' }}</title>
-    @vite(['resources/css/app.scss', 'resources/js/app.js'])
-</head>
-<body class="bg-light d-flex flex-column min-vh-100">
-
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="/">StuBlog</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">Strona Główna</a></li>
-                </ul>
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/login">Zaloguj</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/register">Zarejestruj</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <main class="container my-5 flex-grow-1">
-        {{ $slot }}
-    </main>
-
-    <footer class="bg-dark text-white text-center py-3 mt-auto">
-        <div class="container">
-            <small>&copy; {{ date('Y') }} StuBlog. Wszelkie prawa zastrzeżone.</small>
-        </div>
-    </footer>
-
-</body>
-</html> --}}
-
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -52,43 +12,91 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    
+
     @stack('styles')
 </head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+
+<body class="d-flex flex-column min-vh-100">
+    <!-- ============================================ -->
+    <!-- NAVIGATION                                    -->
+    <!-- ============================================ -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="{{ route('home') }}">
+            <!-- Brand / Logo -->
+            <a class="navbar-brand fw-bold" href="{{ route('home') }}">
                 <i class="bi bi-journal-richtext me-2"></i>My Blog
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+
+            <!-- Hamburger (mobile) -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
+            <!-- Collapsible menu -->
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <!-- Lewa strona: linki nawigacyjne -->
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('posts.index') ? 'active' : '' }}"
+                            href="{{ route('posts.index') }}">
+                            <i class="bi bi-journal-text me-1"></i>Blog
+                        </a>
+                    </li>
                     @auth
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('dashboard') }}">
-                                <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                        @if (auth()->user()->hasVerifiedEmail())
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('posts.create') ? 'active' : '' }}"
+                                    href="{{ route('posts.create') }}">
+                                    <i class="bi bi-plus-circle me-1"></i>New Post
+                                </a>
+                            </li>
+                        @endif
+                    @endauth
+                </ul>
+
+                <!-- Prawa strona: konto użytkownika -->
+                <ul class="navbar-nav">
+                    @auth
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle me-1"></i>{{ auth()->user()->name }}
                             </a>
-                        </li>
-                        <li class="nav-item">
-                            <form method="POST" action="{{ route('logout') }}" class="d-inline">
-                                @csrf
-                                <button type="submit" class="btn nav-link border-0 bg-transparent">
-                                    <i class="bi bi-box-arrow-right me-1"></i>Logout
-                                </button>
-                            </form>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('dashboard') }}">
+                                        <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('password.change') }}">
+                                        <i class="bi bi-key me-2"></i>Change Password
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
                         </li>
                     @else
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('login') }}">
+                            <a class="nav-link {{ request()->routeIs('login') ? 'active' : '' }}"
+                                href="{{ route('login') }}">
                                 <i class="bi bi-box-arrow-in-right me-1"></i>Login
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('register') }}">
+                            <a class="nav-link {{ request()->routeIs('register') ? 'active' : '' }}"
+                                href="{{ route('register') }}">
                                 <i class="bi bi-person-plus me-1"></i>Register
                             </a>
                         </li>
@@ -98,15 +106,25 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main>
+    <!-- ============================================ -->
+    <!-- MAIN CONTENT                                  -->
+    <!-- ============================================ -->
+    <main class="flex-grow-1">
         {{ $slot }}
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-light py-4 mt-5">
-        <div class="container text-center text-muted">
-            <small>&copy; {{ date('Y') }} My Blog. All rights reserved.</small>
+    <!-- ============================================ -->
+    <!-- FOOTER                                        -->
+    <!-- ============================================ -->
+    <footer class="bg-light py-4 mt-auto border-top">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <small class="text-muted">
+                        &copy; {{ date('Y') }} <strong>My Blog</strong>. All rights reserved.
+                    </small>
+                </div>
+            </div>
         </div>
     </footer>
 
@@ -114,4 +132,5 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     @stack('scripts')
 </body>
+
 </html>

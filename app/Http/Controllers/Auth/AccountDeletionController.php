@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AccountDeletionController extends Controller
 {
@@ -32,11 +32,21 @@ class AccountDeletionController extends Controller
             'confirmation' => ['required', 'accepted'],
         ]);
 
-        // 2. Optionally anonymize activity instead of deleting
-        $this->anonymizeUserData($user);
+        try {
+            DB::transaction(function () use ($user) {
+                $this->anonymizeUserData($user);
+                $user->delete();
+            });
+        } catch (\Exception $e) {
+            Log::error('Account deletion failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
 
-        // 3.
-        $user->delete();
+            return back()->withErrors([
+                'general' => 'Could not remove your account. Try again or contact helpdesk.'
+            ]);
+        }
 
         // 4. Logout
         Auth::logout();
@@ -54,13 +64,13 @@ class AccountDeletionController extends Controller
         DB::transaction(function () use ($user) {
             $user->posts()->update([
                 'user_id' => null,
-                'title' => DB::raw("CONCAT('Deleted Post ', id)"),
-                'content' => 'This content has been removed by the user.',
+                // 'title' => DB::raw("CONCAT('Deleted Post ', id)"),
+                // 'content' => 'This content has been removed by the user.',
             ]);
 
             $user->comments()->update([
                 'user_id' => null,
-                'content' => 'This comment has been removed by the user.',
+                // 'content' => 'This comment has been removed by the user.',
             ]);
 
             $user->interactions()->delete();
