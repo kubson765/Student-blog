@@ -30,17 +30,15 @@
 
                 <!-- Post Card -->
                 <article class="card shadow-sm">
-                    @if($post->featured_image)
-                        <img src="{{ Storage::url($post->featured_image) }}"
-                             class="card-img-top"
-                             alt="{{ $post->title }}"
-                             style="max-height: 400px; object-fit: cover;">
+                    @if ($post->featured_image)
+                        <img src="{{ Storage::url($post->featured_image) }}" class="card-img-top"
+                            alt="{{ $post->title }}" style="max-height: 400px; object-fit: cover;">
                     @endif
 
                     <div class="card-body p-4 p-md-5">
                         <!-- Status badges -->
                         <div class="mb-3">
-                            @if($post->isDraft())
+                            @if ($post->isDraft())
                                 <span class="badge bg-warning text-dark">
                                     <i class="bi bi-pencil me-1"></i>Draft
                                 </span>
@@ -66,11 +64,11 @@
                         <div class="d-flex flex-wrap gap-3 text-muted mb-4 pb-3 border-bottom">
                             <div>
                                 <i class="bi bi-person-circle me-1"></i>
-                                <strong>{{ $post->user->name }}</strong>
+                                <strong>{{ $post->author_name }}</strong>
                             </div>
                             <div>
                                 <i class="bi bi-calendar3 me-1"></i>
-                                @if($post->published_at)
+                                @if ($post->published_at)
                                     {{ $post->published_at->format('F d, Y') }}
                                 @else
                                     {{ $post->created_at->format('F d, Y') }}
@@ -88,15 +86,15 @@
                         </div>
 
                         <!-- Tags -->
-                        @if($post->tags->count() > 0)
+                        @if ($post->tags->count() > 0)
                             <div class="mt-5 pt-4 border-top">
                                 <h6 class="text-muted mb-3">
                                     <i class="bi bi-tags me-1"></i>Tags
                                 </h6>
                                 <div class="d-flex flex-wrap gap-2">
-                                    @foreach($post->tags as $tag)
+                                    @foreach ($post->tags as $tag)
                                         <a href="{{ route('posts.index', ['tag' => $tag->slug]) }}"
-                                           class="badge bg-secondary text-decoration-none">
+                                            class="badge bg-secondary text-decoration-none">
                                             #{{ $tag->name }}
                                         </a>
                                     @endforeach
@@ -107,15 +105,13 @@
 
                     <!-- Author actions -->
                     @auth
-                        @if(auth()->id() === $post->user_id)
+                        @if (auth()->id() === $post->user_id)
                             <div class="card-footer bg-light d-flex justify-content-end gap-2 p-3">
-                                <a href="{{ route('posts.edit', $post) }}"
-                                   class="btn btn-outline-primary">
+                                <a href="{{ route('posts.edit', $post) }}" class="btn btn-outline-primary">
                                     <i class="bi bi-pencil me-2"></i>Edit Post
                                 </a>
-                                <form method="POST"
-                                      action="{{ route('posts.destroy', $post) }}"
-                                      onsubmit="return confirm('Are you sure you want to delete this post?');">
+                                <form method="POST" action="{{ route('posts.destroy', $post) }}"
+                                    onsubmit="return confirm('Are you sure you want to delete this post?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-outline-danger">
@@ -136,11 +132,11 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        @if(isset($post->comments) && $post->comments->count() > 0)
-                            @foreach($post->comments as $comment)
+                        @if (isset($post->comments) && $post->comments->count() > 0)
+                            @foreach ($post->comments as $comment)
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex align-items-center mb-2">
-                                        <strong>{{ $comment->user->name }}</strong>
+                                        <strong>{{ $comment->author_name }}</strong>
                                         <small class="text-muted ms-2">
                                             {{ $comment->created_at->diffForHumans() }}
                                         </small>

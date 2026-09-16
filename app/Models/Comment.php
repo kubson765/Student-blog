@@ -8,11 +8,26 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Traits\Moderatable;
 
-#[Fillable(['post_id', 'user_id', 'parent_id', 'content', 'is_approved'])]
 class Comment extends Model
 {
-    use HasFactory;
+    use HasFactory, Moderatable;
+
+    protected $fillable = [
+        'post_id',
+        'user_id',
+        'parent_id',
+        'content',
+        'moderation_status',
+        'moderation_reason',
+        'moderated_at',
+        'moderated_by',
+    ];
+
+    protected $casts = [
+        'moderated_at' => 'datetime',
+    ];
 
     protected function casts(): array
     {
@@ -34,7 +49,9 @@ class Comment extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withDefault([
+            'name' => 'Usunięty użytkownik',
+        ]);
     }
 
     /**
@@ -50,7 +67,7 @@ class Comment extends Model
      */
     public function replies(): HasMany
     {
-        return $this->hasMany(Comment::class, 'parent_id');
+        return $this->hasMany(Comment::class, 'parent_id')->latest();
     }
 
     /**
@@ -59,5 +76,63 @@ class Comment extends Model
     public function interactions(): MorphMany
     {
         return $this->morphMany(Interaction::class, 'interactable');
+    }
+
+    // ============================================
+    // SCOPES
+    // ============================================
+
+    /**
+     * Tylko komentarze główne (bez parent_id)
+     */
+    public function scopeRoot($query)
+    {
+        return $query->whereNull('parent_id');
+    }
+
+    /**
+     * Tylko zaakceptowane
+     */
+    public function scopeApproved($query)
+    {
+        return $query->where('moderation_status', 'approved');
+    }
+
+    /**
+     * Z odpowiedziami (eager loading)
+     */
+    public function scopeWithReplies($query)
+    {
+        return $query->with(['replies.user', 'user']);
+    }
+
+    // ============================================
+    // METODY POMOCNICZE
+    // ============================================
+
+    /**
+     * Czy komentarz jest odpowiedzią?
+     */
+    public function isReply(): bool
+    {
+        return $this->parent_id !== null;
+    }
+
+    /**
+     * Czy komentarz może być edytowany przez użytkownika?
+     * (w ciągu 15 minut od utworzenia)
+     */
+    public function isEditableBy(User $user): bool
+    {
+        return $this->user_id === $user->id
+            && $this->created_at->diffInMinutes(now()) <= 15;
+    }
+
+    /**
+     * Czy komentarz jest widoczny publicznie?
+     */
+    public function isVisible(): bool
+    {
+        return $this->moderation_status === 'approved';
     }
 }

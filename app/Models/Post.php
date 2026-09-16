@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 #[Fillable(['user_id', 'title', 'slug', 'content', 'category', 'status', 'published_at'])]
 class Post extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Traits\Moderatable;
 
     const STATUS_DRAFT = 'draft';
     const STATUS_PUBLISHED = 'published';
@@ -28,6 +28,7 @@ class Post extends Model
         'content',
         'category',
         'status',
+        'moderation_status',
         'published_at',
         'featured_image',
     ];
@@ -86,7 +87,8 @@ class Post extends Model
     {
         return $query->where('status', self::STATUS_PUBLISHED)
             ->whereNotNull('published_at')
-            ->where('published_at', '<=', now());
+            ->where('published_at', '<=', now())
+            ->where('moderation_status', 'approved');
     }
 
     /**
@@ -205,6 +207,16 @@ class Post extends Model
     public function archive(): void
     {
         $this->update(['status' => self::STATUS_ARCHIVED]);
+    }
+
+    public function getAuthorNameAttribute(): string
+    {
+        return $this->user?->name ?? 'Usunięty użytkownik';
+    }
+
+    public function getAuthorAvatarAttribute(): ?string
+    {
+        return $this->user?->avatar ?? null;
     }
 
     // ============================================

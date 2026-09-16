@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+
 
 class PasswordChangeController extends Controller
 {

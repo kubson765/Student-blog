@@ -58,6 +58,15 @@
                 <!-- Prawa strona: konto użytkownika -->
                 <ul class="navbar-nav">
                     @auth
+                        @auth
+                            @if (auth()->user()->isModerator())
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('moderation.index') }}">
+                                        <i class="bi bi-shield-check me-1"></i>Moderacja
+                                    </a>
+                                </li>
+                            @endif
+                        @endauth
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
                                 data-bs-toggle="dropdown" aria-expanded="false">

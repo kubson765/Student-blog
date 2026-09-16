@@ -24,6 +24,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'role',
+        'moderator_since',
+        'role_assigned_by',
     ];
 
     protected $hidden = [
@@ -48,6 +51,44 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new ResetPassword($token));
+    }
+
+    // ===== MODERATION =====
+
+    public function isModerator(): bool
+    {
+        return in_array($this->role, ['moderator', 'admin']);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
+    }
+
+    public function ban(string $reason): void
+    {
+        $this->update([
+            'banned_at' => now(),
+            'ban_reason' => $reason,
+        ]);
+    }
+
+    public function unban(): void
+    {
+        $this->update([
+            'banned_at' => null,
+            'ban_reason' => null,
+        ]);
+    }
+
+    public function getAuthorNameAttribute(): ?string
+    {
+        return $this->user->name ?? 'Użytkownik usunięty';
     }
 
     /*

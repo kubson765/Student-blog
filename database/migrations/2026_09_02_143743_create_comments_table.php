@@ -10,17 +10,26 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-{
-    Schema::create('comments', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('post_id')->constrained()->onDelete('cascade');
-        $table->foreignId('user_id')->constrained()->onDelete('cascade');
-        $table->foreignId('parent_id')->nullable()->constrained('comments')->onDelete('cascade'); // Odpowiedzi na komentarze
-        $table->text('content');
-        $table->boolean('is_approved')->default(true);
-        $table->timestamps();
-    });
-}
+    {
+        Schema::create('comments', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('post_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('parent_id')->nullable()->constrained('comments')->onDelete('cascade'); // Odpowiedzi na komentarze
+            $table->text('content');
+            $table->enum(
+                'moderation_status',
+                [
+                    'pending',
+                    'approved',
+                    'rejected',
+                    'spam',
+                    'hidden',
+                ]
+            );
+            $table->timestamps();
+        });
+    }
 
     /**
      * Reverse the migrations.

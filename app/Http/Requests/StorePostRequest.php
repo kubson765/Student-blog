@@ -23,7 +23,7 @@ class StorePostRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'min:5', 'max:255'],
-            'content' => ['required', 'string', 'min:50', 'max:5000'],
+            'content' => ['required', 'string', 'min:25', 'max:5000'],
             'category' => ['required', 'string', 'max:100'],
             'status' => ['required', Rule::in(['draft', 'published'])],
             'published_at' => ['nullable', 'date', 'after_or_equal:now'],
@@ -41,7 +41,8 @@ class StorePostRequest extends FormRequest
             'title.required' => 'Tytuł jest wymagany.',
             'title.min' => 'Tytuł musi mieć co najmniej 5 znaków.',
             'content.required' => 'Treść posta jest wymagana.',
-            'content.min' => 'Treść musi mieć co najmniej 50 znaków.',
+            'content.min' => 'Treść musi mieć co najmniej 25 znaków.',
+            'content.max' => 'Treść posta nie może przekraczać 5000 znaków',
             'status.in' => 'Status musi być jednym z: draft, published.',
             'published_at.after_or_equal' => 'Data publikacji nie może być z przeszłości.',
         ];

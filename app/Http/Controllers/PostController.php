@@ -37,11 +37,21 @@ class PostController extends Controller
         // ===== VISIBILITY =====
         if ($request->user()) {
             $query->where(function ($q) use ($request) {
-                $q->where('status', Post::STATUS_PUBLISHED)
-                    ->orWhere('user_id', $request->user()->id);
+                $q->where(function ($sub) use ($request) {
+                    $sub->where('user_id', $request->user()->id);
+                })->orWhere(function ($sub) {
+                    $sub->where('moderation_status', 'approved')
+                        ->where('status', Post::STATUS_PUBLISHED)
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+                });
             });
         } else {
-            $query->published();
+            // Guest view
+            $query->where('moderation_status', 'approved')
+                ->where('status', Post::STATUS_PUBLISHED)
+                ->whereNotNull('published_at')
+                ->where('published_at', '<=', now());
         }
 
         // ===== SEARCH =====
@@ -131,6 +141,8 @@ class PostController extends Controller
         $data = $request->validated();
         $data['user_id'] = $request->user()->id;
 
+        $data['moderation_status'] = 'pending';
+
         // Ustaw published_at jeśli publikujemy
         if ($data['status'] === Post::STATUS_PUBLISHED) {
             $data['published_at'] = $data['published_at'] ?? now();
@@ -151,7 +163,7 @@ class PostController extends Controller
 
             return redirect()
                 ->route('posts.show', $post)
-                ->with('success', 'Post został utworzony pomyślnie!');
+                ->with('success', 'Post został utworzony pomyślnie! Wymaga teraz akceptacji przez moderację.');
         } catch (\Exception $e) {
             Log::error("Post creation failed", [
                 'user_id' => $request->user->id,
@@ -170,6 +182,10 @@ class PostController extends Controller
     public function show(Post $post): View
     {
         $this->authorize('view', $post);
+
+        if (!$post->isVisible() && auth()->id() !== $post->user_id && auth()->role() == 'user') {
+            abort(404);
+        }
 
         $post->load(['user', 'tags', 'comments.user']);
 

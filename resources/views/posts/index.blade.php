@@ -207,9 +207,29 @@
                                             <i class="bi bi-pencil me-1"></i>Szkic
                                         </span>
                                     @elseif($post->isPublished())
-                                        <span class="badge bg-success">
-                                            <i class="bi bi-check-circle me-1"></i>Opublikowany
-                                        </span>
+                                        <div class="mb-2">
+                                            @if ($post->moderation_status === 'pending')
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-clock me-1"></i>Oczekuje na moderację
+                                                </span>
+                                            @elseif($post->moderation_status === 'rejected')
+                                                <span class="badge bg-danger">
+                                                    <i class="bi bi-x-circle me-1"></i>Odrzucony
+                                                </span>
+                                            @elseif($post->moderation_status === 'approved')
+                                                @if ($post->isDraft())
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="bi bi-pencil me-1"></i>Szkic
+                                                    </span>
+                                                @elseif($post->isPublished())
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-check-circle me-1"></i>Opublikowany
+                                                    </span>
+                                                @endif
+                                            @endif
+
+                                            <span class="badge bg-info text-dark">{{ $post->category }}</span>
+                                        </div>
                                     @else
                                         <span class="badge bg-secondary">
                                             <i class="bi bi-archive me-1"></i>Zarchiwizowany
@@ -256,7 +276,7 @@
                                 <div class="d-flex justify-content-between align-items-center small text-muted mt-2">
                                     <div>
                                         <i class="bi bi-person-circle me-1"></i>
-                                        {{ $post->user->name }}
+                                        {{ $post->author_name }}
                                     </div>
                                     <div>
                                         <i class="bi bi-clock me-1"></i>

@@ -8,62 +8,137 @@ use App\Models\User;
 class PostPolicy
 {
     /**
-     * Determine whether the user can view his posts.
+     * Widok listy – wszyscy
      */
-    public function viewAny(User $user): bool
+    public function viewAny(?User $user): bool
     {
         return true;
     }
 
     /**
-     * Determine whether the user can view the model.
+     * Widok pojedynczego posta
      */
-    public function view(User $user, Post $post): bool
+    public function view(?User $user, Post $post): bool
     {
-        if ($post->isPublished()) {
+        // Zawsze widoczne, jeśli approved i opublikowane
+        if ($post->isVisible() && $post->status === 'published') {
+            return true;
+        }
+
+        // Właściciel widzi swoje
+        if ($user && $user->id === $post->user_id) {
+            return true;
+        }
+
+        // Moderator widzi WSZYSTKO (do moderacji)
+        if ($user && $user->isModerator()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Tworzenie posta
+     */
+    public function create(User $user): bool
+    {
+        return $user->hasVerifiedEmail()
+            && !$user->isBanned();
+    }
+
+    /**
+     * Edycja posta – TYLKO autor
+     * Moderator NIE MOŻE edytować!
+     */
+    public function update(User $user, Post $post): bool
+    {
+        return $user->id === $post->user_id
+            && !$user->isBanned();
+    }
+
+    /**
+     * Usuwanie posta – TYLKO autor (lub admin)
+     * Moderator NIE MOŻE usuwać!
+     */
+    public function delete(User $user, Post $post): bool
+    {
+        if ($user->isAdmin()) {
             return true;
         }
 
         return $user->id === $post->user_id;
     }
 
+// ============================================
+// AKCJE MODERACYJNE – TYLKO MODERATOR I ADMIN
+// ============================================
+
     /**
-     * Czy użytkownik może tworzyć posty?
+     * Czy może moderować (widzieć kolejkę)?
      */
-    public function create(User $user): bool
+    public function moderate(User $user): bool
     {
-        return $user->hasVerifiedEmail();
+        return $user->isModerator() && !$user->isBanned();
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Czy może zaakceptować post?
      */
-    public function update(User $user, Post $post): bool
+    public function approve(User $user, Post $post): bool
     {
-        return $user->id === $post->user_id;
+        // Moderator/admin, nie autor (nie może zatwierdzić własnego posta!)
+        if (!$user->isModerator()) {
+            return false;
+        }
+
+        // Zasada four-eyes: nie możesz moderować własnych treści
+        if ($post->user_id === $user->id) {
+            return false;
+        }
+
+        // Można zatwierdzić tylko posty oczekujące
+        return in_array($post->moderation_status, ['pending', 'rejected']);
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Czy może odrzucić post?
      */
-    public function delete(User $user, Post $post): bool
+    public function reject(User $user, Post $post): bool
     {
-        return $user->id === $post->user_id;
+        if (!$user->isModerator()) {
+            return false;
+        }
+
+        if ($post->user_id === $user->id) {
+            return false;
+        }
+
+        return $post->moderation_status === 'pending';
     }
 
     /**
-     * Determine whether the user can restore the model.
+     * Czy może oznaczyć jako spam?
      */
-    public function restore(User $user, Post $post): bool
+    public function markAsSpam(User $user, Post $post): bool
     {
-        return $user->id === $post->user_id;
+        return $this->reject($user, $post);
     }
 
     /**
-     * Determine whether the user can permanently delete the model.
+     * Czy może eskalować do admina?
      */
-    public function forceDelete(User $user, Post $post): bool
+    public function escalate(User $user, Post $post): bool
     {
-        return $user->id === $post->user_id;
+        return $user->isModerator() && $post->user_id !== $user->id;
+    }
+
+    /**
+     * Czy może trwale usunąć (ukryć) post?
+     * TYLKO ADMIN – moderator nie ma tego uprawnienia!
+     */
+    public function forceHide(User $user, Post $post): bool
+    {
+        return $user->isAdmin();
     }
 }

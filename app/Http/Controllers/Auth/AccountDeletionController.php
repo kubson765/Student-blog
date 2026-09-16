@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class AccountDeletionController extends Controller
 {
@@ -32,11 +33,19 @@ class AccountDeletionController extends Controller
             'confirmation' => ['required', 'accepted'],
         ]);
 
+        $userId = $user->id;
+        $userEmail = $user->email;
+
         try {
             DB::transaction(function () use ($user) {
                 $this->anonymizeUserData($user);
                 $user->delete();
             });
+
+            Log::info('Account deleted', [
+                'user_id' => $userId,
+                'email' => $userEmail,
+            ]);
         } catch (\Exception $e) {
             Log::error('Account deletion failed', [
                 'user_id' => $user->id,
@@ -58,22 +67,19 @@ class AccountDeletionController extends Controller
     }
 
     // Clearing user activity
-    protected function anonymizeUserData($user): void
+    protected function anonymizeUserData(User $user): void
     {
+        $user->posts()->update([
+            'user_id' => null,
+            // 'title' => DB::raw("CONCAT('Deleted Post ', id)"),
+            // 'content' => 'This content has been removed by the user.',
+        ]);
 
-        DB::transaction(function () use ($user) {
-            $user->posts()->update([
-                'user_id' => null,
-                // 'title' => DB::raw("CONCAT('Deleted Post ', id)"),
-                // 'content' => 'This content has been removed by the user.',
-            ]);
+        $user->comments()->update([
+            'user_id' => null,
+            // 'content' => 'This comment has been removed by the user.',
+        ]);
 
-            $user->comments()->update([
-                'user_id' => null,
-                // 'content' => 'This comment has been removed by the user.',
-            ]);
-
-            $user->interactions()->delete();
-        });
+        $user->interactions()->delete();
     }
 }
