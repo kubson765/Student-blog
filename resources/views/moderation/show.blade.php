@@ -93,27 +93,6 @@
                     </div>
                 </div>
 
-                {{-- Spam --}}
-                {{-- <div class="card shadow-sm mb-3 border-secondary">
-                    <div class="card-header bg-secondary text-white">
-                        <h6 class="mb-0"><i class="bi bi-shield-exclamation me-2"></i>Oznacz jako spam</h6>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST"
-                            action="{{ route('moderation.spam', ['type' => $type, 'id' => $post->id]) }}">
-                            @csrf
-                            <div class="mb-3">
-                                <label class="form-label small">Powód</label>
-                                <textarea name="reason" class="form-control form-control-sm" rows="3" minlength="10" maxlength="500" required
-                                    placeholder="Np. Reklama / linki do nielegalnych treści"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-secondary w-100">
-                                <i class="bi bi-shield-exclamation me-1"></i>Oznacz jako spam
-                            </button>
-                        </form>
-                    </div>
-                </div> --}}
-
                 {{-- Eskaluj --}}
                 {{-- <div class="card shadow-sm mb-3 border-warning">
                     <div class="card-header bg-warning text-dark">
@@ -137,12 +116,12 @@
                         </form>
                     </div>
                 </div> --}}
-                {{-- <div class="mt-3">
+                <div class="mt-3">
                     <a href="{{ route('moderation.history', ['type' => $type, 'id' => $post->id]) }}"
                         class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-clock-history me-1"></i>Historia moderacji
                     </a>
-                </div> --}}
+                </div>
             </div>
         </div>
     </div>

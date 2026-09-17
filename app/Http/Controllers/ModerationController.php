@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\AnonymousPost;
 use App\Models\Post;
 use App\Models\Comment;
+use App\Models\Report;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -121,12 +123,144 @@ class ModerationController extends Controller
             ->with('success', 'Post odrzucony.');
     }
 
+    /**
+     * Lista zgłoszeń dla moderatora
+     */
+    public function reports(Request $request)
+    {
+        $query = Report::with(['reporter', 'reportable'])
+            ->where('status', 'pending')
+            ->latest();
+
+        // Filtr po statusie
+        if ($status = $request->input('status', 'pending')) {
+            $query->where('status', $status);
+        }
+
+        // Filtr po powodzie
+        if ($reason = $request->input('reason')) {
+            $query->where('reason', $reason);
+        }
+
+        $reports = $query->paginate(20)->withQueryString();
+
+        // Statystyki
+        $stats = [
+            'pending' => Report::where('status', 'pending')->count(),
+            'reviewing' => Report::where('status', 'reviewing')->count(),
+            'resolved' => Report::where('status', 'resolved')->count(),
+            'dismissed' => Report::where('status', 'dismissed')->count(),
+        ];
+
+        return view('moderation.reports', compact('reports', 'stats'));
+    }
+
+    /**
+     * Oznacz zgłoszenie jako rozwiązane (treść zostanie zdjęta)
+     */
+    public function resolveReport(Request $request, Report $report): RedirectResponse
+    {
+        $this->authorize('moderate', Post::class);
+
+        $request->validate([
+            'reason' => 'required|string|min:10|max:500',
+        ]);
+
+        try {
+            DB::transaction(function () use ($report, $request) {
+                $report->update([
+                    'status' => 'resolved',
+                ]);
+
+                // Zdejmij treść z publikacji
+                $reportable = $report->reportable;
+                if ($reportable) {
+                    $reportable->update([
+                        'moderation_status' => 'hidden',
+                        'moderation_reason' => 'Zgłoszenie rozpatrzone: ' . $request->reason,
+                        'moderated_at' => now(),
+                        'moderated_by' => auth()->id(),
+                    ]);
+
+                    // Log akcji
+                    if (method_exists($reportable, 'logModerationAction')) {
+                        $reportable->logModerationAction(
+                            auth()->user(),
+                            'reject',
+                            'Zgłoszenie rozpatrzone: ' . $request->reason
+                        );
+                    }
+                }
+
+                // Odrzuć pozostałe zgłoszenia dla tej samej treści
+                Report::where('reportable_type', $report->reportable_type)
+                    ->where('reportable_id', $report->reportable_id)
+                    ->where('id', '!=', $report->id)
+                    ->where('status', 'pending')
+                    ->update(['status' => 'resolved']);
+            });
+
+            return redirect()
+                ->route('moderation.reports')
+                ->with('success', 'Zgłoszenie rozpatrzone. Treść została ukryta.');
+        } catch (\Exception $e) {
+            Log::error('Report resolve failed', [
+                'report_id' => $report->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors(['general' => 'Nie udało się rozpatrzyć zgłoszenia.']);
+        }
+    }
+
+    /**
+     * Odrzuć zgłoszenie (treść zostaje)
+     */
+    public function dismissReport(Request $request, Report $report): RedirectResponse
+    {
+        $this->authorize('moderate', Post::class);
+
+        $request->validate([
+            'reason' => 'required|string|min:10|max:500',
+        ]);
+
+        try {
+            DB::transaction(function () use ($report, $request) {
+                $report->update([
+                    'status' => 'dismissed',
+                ]);
+
+                // Log akcji (jeśli treść ma trait Moderatable)
+                $reportable = $report->reportable;
+                if ($reportable && method_exists($reportable, 'logModerationAction')) {
+                    $reportable->logModerationAction(
+                        auth()->user(),
+                        'approve',
+                        'Zgłoszenie odrzucone: ' . $request->reason
+                    );
+                }
+            });
+
+            return redirect()
+                ->route('moderation.reports')
+                ->with('success', 'Zgłoszenie odrzucone. Treść pozostaje opublikowana.');
+        } catch (\Exception $e) {
+            Log::error('Report dismiss failed', [
+                'report_id' => $report->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withErrors(['general' => 'Nie udało się odrzucić zgłoszenia.']);
+        }
+    }
+
     private function resolvePost(string $type, int $id)
     {
         return match ($type) {
             'anonymous' => AnonymousPost::findOrFail($id),
             'posts' => Post::findOrFail($id),
             'comments' => Comment::findOrFail($id),
+            'reports' => Report::findOrFail($id),
             default => abort(404),
         };
     }

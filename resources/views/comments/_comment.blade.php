@@ -60,6 +60,11 @@
                     </span>
                 @endif
             @endauth
+            @auth
+                @if (auth()->id() !== $comment->user_id)
+                    <x-report-button type="comment" :id="$comment->id" />
+                @endif
+            @endauth
 
             @if ($isEditable)
                 <a href="{{ route('comments.edit', $comment) }}" class="text-decoration-none">

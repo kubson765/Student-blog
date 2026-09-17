@@ -7,17 +7,20 @@
                         <div class="display-1 text-primary mb-4">
                             <i class="bi bi-journal-richtext"></i>
                         </div>
-                        <h1 class="display-4 mb-3">Welcome to My Blog</h1>
-                        <p class="lead text-muted">A technical blog platform built with Laravel</p>
-                        
+                        <h1 class="display-4 mb-3">Witaj na StuBlog</h1>
+                        <p class="lead text-muted">Forum dla studentów, chcących podzielić się swoimi doświadczeniami</p>
+
                         <div class="mt-5">
                             @auth
+                                <a href="{{ route('posts.index') }}" class="btn btn-primary btn-lg px-5">
+                                    <i class="bi bi-journal-text me-1"></i>Forum
+                                </a>
                                 <a href="{{ route('dashboard') }}" class="btn btn-primary btn-lg px-5">
-                                    <i class="bi bi-speedometer2 me-2"></i>Go to Dashboard
+                                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
                                 </a>
                             @else
                                 <a href="{{ route('register') }}" class="btn btn-primary btn-lg px-5 me-3">
-                                    <i class="bi bi-person-plus me-2"></i>Get Started
+                                    <i class="bi bi-person-plus me-2"></i>Załóż konto
                                 </a>
                                 <a href="{{ route('login') }}" class="btn btn-outline-secondary btn-lg px-5">
                                     <i class="bi bi-box-arrow-in-right me-2"></i>Login
@@ -26,16 +29,19 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Blog Features -->
                 <div class="row mt-5 text-start">
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
                             <div class="card-body">
                                 <h5 class="card-title text-primary">
-                                    <i class="bi bi-pencil-square me-2"></i>Write Posts
+                                    <i class="bi bi-pencil-square me-2"></i>Dodawaj wpsiy
                                 </h5>
-                                <p class="card-text text-muted small">Create and manage your technical blog posts with ease.</p>
+                                <p class="card-text text-muted small">Opisuj swoje doświadczenie i przemyślenia na każdy
+                                    temat,
+                                    związany ze studiami
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -43,9 +49,11 @@
                         <div class="card h-100">
                             <div class="card-body">
                                 <h5 class="card-title text-success">
-                                    <i class="bi bi-chat-dots me-2"></i>Engage
+                                    <i class="bi bi-chat-dots me-2"></i>Udzielaj się
                                 </h5>
-                                <p class="card-text text-muted small">Interact with readers through comments and discussions.</p>
+                                <p class="card-text text-muted small">Twórz społeczność wchodząc w interakcję z innymi
+                                    studentami
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -53,9 +61,10 @@
                         <div class="card h-100">
                             <div class="card-body">
                                 <h5 class="card-title text-info">
-                                    <i class="bi bi-tags me-2"></i>Organize
+                                    <i class="bi bi-tags me-2"></i>Organizuj
                                 </h5>
-                                <p class="card-text text-muted small">Categorize and tag your content for better discovery.</p>
+                                <p class="card-text text-muted small">Kategoryzuj i oznaczaj swoje posty dla
+                                    łatwiejszego odnajdywania</p>
                             </div>
                         </div>
                     </div>

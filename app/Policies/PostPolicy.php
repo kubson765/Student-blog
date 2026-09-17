@@ -30,7 +30,6 @@ class PostPolicy
             return true;
         }
 
-        // Moderator widzi WSZYSTKO (do moderacji)
         if ($user && $user->isModerator()) {
             return true;
         }
@@ -48,8 +47,7 @@ class PostPolicy
     }
 
     /**
-     * Edycja posta – TYLKO autor
-     * Moderator NIE MOŻE edytować!
+     * Edycja posta
      */
     public function update(User $user, Post $post): bool
     {
@@ -58,8 +56,7 @@ class PostPolicy
     }
 
     /**
-     * Usuwanie posta – TYLKO autor (lub admin)
-     * Moderator NIE MOŻE usuwać!
+     * Usuwanie posta
      */
     public function delete(User $user, Post $post): bool
     {

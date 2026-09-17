@@ -35,5 +35,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('reports', function (Request $request) {
             return Limit::perHour(10)->by($request->ip());
         });
+
+        RateLimiter::for('anonymous-posts', function (Request $request) {
+            return Limit::perHour(10)->by($request->ip());
+        });
     }
 }

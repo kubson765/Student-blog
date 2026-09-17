@@ -24,18 +24,18 @@
                         <span class="badge bg-danger ms-1">{{ $stats['pending_posts'] }}</span>
                     @endif
                 </a>
-                {{-- <a href="{{ route('moderation.index', ['type' => 'reports']) }}"
-                    class="btn btn-outline-warning {{ $type === 'reports' ? 'active' : '' }}">
-                    Zgłoszenia
-                    @if ($stats['pending_reports'] > 0)
-                        <span class="badge bg-danger ms-1">{{ $stats['pending_reports'] }}</span>
-                    @endif
-                </a> --}}
                 <a href="{{ route('moderation.index', ['type' => 'comments']) }}"
                     class="btn btn-outline-primary {{ $type === 'comments' ? 'active' : '' }}">
                     Komentarze
                     @if (($stats['pending_comments'] ?? 0) > 0)
                         <span class="badge bg-danger ms-1">{{ $stats['pending_comments'] }}</span>
+                    @endif
+                </a>
+                <a href="{{ route('moderation.reports', ['type' => 'reports']) }}"
+                    class="btn btn-outline-warning {{ $type === 'reports' ? 'active' : '' }}">
+                    Zgłoszenia
+                    @if ($stats['pending_reports'] > 0)
+                        <span class="badge bg-danger ms-1">{{ $stats['pending_reports'] }}</span>
                     @endif
                 </a>
             </div>
@@ -65,10 +65,10 @@
                                 {{ $item->post->title }}
                             </a>
                         </p>
-                        <p class="card-text">{{ Str::limit($item->content, 200) }}</p>
+                        <p class="card-text">{{ Str::limit($item->content, 100) }}</p>
                     @else
                         <h5 class="card-title">{{ $item->title }}</h5>
-                        <p class="card-text">{{ Str::limit($item->content, 200) }}</p>
+                        <p class="card-text">{{ Str::limit($item->content, 100) }}</p>
                     @endif
                     <div class="col-md-6 mb-4">
                         <div class="card shadow-sm h-100">

@@ -84,7 +84,13 @@
                         <div class="post-content" style="font-size: 1.1rem; line-height: 1.8;">
                             {!! nl2br(e($post->content)) !!}
                         </div>
-
+                        @auth
+                            @if (auth()->id() !== $post->user_id)
+                                <div class="mt-3">
+                                    <x-report-button type="post" :id="$post->id" />
+                                </div>
+                            @endif
+                        @endauth
                         <!-- Tags -->
                         @if ($post->tags->count() > 0)
                             <div class="mt-5 pt-4 border-top">

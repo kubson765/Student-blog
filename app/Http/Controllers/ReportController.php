@@ -6,8 +6,10 @@ use App\Models\Post;
 use App\Models\Comment;
 use App\Models\AnonymousPost;
 use App\Models\Report;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ReportController extends Controller
 {
@@ -42,28 +44,39 @@ class ReportController extends Controller
             return back()->with('info', 'Już zgłosiłeś tę treść.');
         }
 
-        DB::transaction(function () use ($request, $reportable, $fingerprint) {
-            Report::create([
-                'reporter_id' => $request->user()?->id,
+        try {
+
+            DB::transaction(function () use ($request, $reportable, $fingerprint) {
+                Report::create([
+                    'reporter_id' => $request->user()?->id,
+                    'reportable_type' => get_class($reportable),
+                    'reportable_id' => $reportable->id,
+                    'reason' => $request->reason,
+                    'description' => $request->description,
+                    'reporter_fingerprint' => $fingerprint,
+                    'status' => 'pending',
+                ]);
+
+                // Automatyczne ukrycie po X zgłoszeniach
+                $reportCount = $reportable->reports()->count();
+
+                if ($reportCount >= 5 && $reportable->moderation_status === 'approved') {
+                    $reportable->update([
+                        'moderation_status' => 'pending',
+                        'moderation_reason' => "Automatyczne ukrycie po {$reportCount} zgłoszeniach",
+                    ]);
+                }
+            });
+
+            return back()->with('success', 'Zgłoszenie zostało przyjęte. Dziękujemy!');
+        } catch (\Exception $e) {
+            Log::error('Report failed', [
                 'reportable_type' => get_class($reportable),
                 'reportable_id' => $reportable->id,
-                'reason' => $request->reason,
-                'description' => $request->description,
-                'reporter_fingerprint' => $fingerprint,
-                'status' => 'pending',
+                'error' => $e->getMessage(),
             ]);
 
-            // Automatyczne ukrycie po X zgłoszeniach
-            $reportCount = $reportable->reports()->count();
-
-            if ($reportCount >= 5 && $reportable->moderation_status === 'approved') {
-                $reportable->update([
-                    'moderation_status' => 'pending',
-                    'moderation_reason' => "Automatyczne ukrycie po {$reportCount} zgłoszeniach",
-                ]);
-            }
-        });
-
-        return back()->with('success', 'Zgłoszenie zostało przyjęte. Dziękujemy!');
+            return back()->withErrors(['general' => 'Nie udało się zapisać zgłoszenia.']);
+        }
     }
 }

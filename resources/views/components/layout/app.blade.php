@@ -24,7 +24,7 @@
         <div class="container">
             <!-- Brand / Logo -->
             <a class="navbar-brand fw-bold" href="{{ route('home') }}">
-                <i class="bi bi-journal-richtext me-2"></i>My Blog
+                <i class="bi bi-journal-richtext me-2"></i>StuBlog
             </a>
 
             <!-- Hamburger (mobile) -->
@@ -40,7 +40,7 @@
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('posts.index') ? 'active' : '' }}"
                             href="{{ route('posts.index') }}">
-                            <i class="bi bi-journal-text me-1"></i>Blog
+                            <i class="bi bi-journal-text me-1"></i>Wpisy
                         </a>
                     </li>
                     @auth
@@ -48,10 +48,16 @@
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('posts.create') ? 'active' : '' }}"
                                     href="{{ route('posts.create') }}">
-                                    <i class="bi bi-plus-circle me-1"></i>New Post
+                                    <i class="bi bi-plus-circle me-1"></i>Dodaj wpis
                                 </a>
                             </li>
                         @endif
+                    @else
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('posts.anonymous.create') }}">
+                                <i class="bi bi-incognito me-1"></i>Anonimowy wpis
+                            </a>
+                        </li>
                     @endauth
                 </ul>
 
@@ -59,6 +65,23 @@
                 <ul class="navbar-nav">
                     @auth
                         @auth
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                                    href="{{ route('dashboard') }}">
+                                    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                                </a>
+                            </li>
+
+                            @if (auth()->user()->isAdmin())
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('admin.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.dashboard') }}">
+                                        <i class="bi bi-shield-lock me-1"></i>Admin
+                                    </a>
+                                </li>
+                            @endif
+
+                            {{-- reszta --}}
                             @if (auth()->user()->isModerator())
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ route('moderation.index') }}">
@@ -130,7 +153,7 @@
             <div class="row align-items-center">
                 <div class="col-md-6 text-center text-md-start">
                     <small class="text-muted">
-                        &copy; {{ date('Y') }} <strong>My Blog</strong>. All rights reserved.
+                        &copy; {{ date('Y') }} <strong>StuBlog</strong>. All rights reserved.
                     </small>
                 </div>
             </div>

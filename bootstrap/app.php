@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
             'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
             'not-banned' => \App\Http\Middleware\EnsureUserIsNotBanned::class,
+            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
     })
 

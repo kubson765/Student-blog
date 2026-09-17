@@ -6,6 +6,7 @@ use App\Models\Post;
 use App\Models\Tag;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
+use App\Models\AnonymousPost;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,77 +33,111 @@ class PostController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = Post::with(['user', 'tags']);
+        $user = $request->user();
 
-        // ===== VISIBILITY =====
-        if ($request->user()) {
-            $query->where(function ($q) use ($request) {
-                $q->where(function ($sub) use ($request) {
-                    $sub->where('user_id', $request->user()->id);
-                })->orWhere(function ($sub) {
-                    $sub->where('moderation_status', 'approved')
-                        ->where('status', Post::STATUS_PUBLISHED)
-                        ->whereNotNull('published_at')
-                        ->where('published_at', '<=', now());
-                });
+        // ===== Zwyczajne posty =====
+        $postsQuery = Post::with(['user', 'tags']);
+
+        if ($user) {
+            $postsQuery->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                    ->orWhere(function ($sub) {
+                        $sub->where('moderation_status', 'approved')
+                            ->where('status', Post::STATUS_PUBLISHED)
+                            ->whereNotNull('published_at')
+                            ->where('published_at', '<=', now());
+                    });
             });
         } else {
-            // Guest view
-            $query->where('moderation_status', 'approved')
+            $postsQuery->where('moderation_status', 'approved')
                 ->where('status', Post::STATUS_PUBLISHED)
                 ->whereNotNull('published_at')
                 ->where('published_at', '<=', now());
         }
 
+        // ===== Anonimowe posty =====
+        $anonymousQuery = AnonymousPost::query()
+            ->where('moderation_status', 'approved')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+
+
         // ===== SEARCH =====
         if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'LIKE', "%{search}%")
-                    ->orWhere('content', 'LIKE', "%{search}%");
+            $postsQuery->where(function ($q) use ($search) {
+                $q->where('title', 'LIKE', "%{$search}%")
+                    ->orWhere('content', 'LIKE', "%{$search}%");
+            });
+
+            $anonymousQuery->where(function ($q) use ($search) {
+                $q->where('title', 'LIKE', "%{$search}%")
+                    ->orWhere('content', 'LIKE', "%{$search}%");
             });
         }
 
         // ===== CATEGORY FILTER =====
         if ($category = $request->input('category')) {
-            $query->where('category', $category);
+            $postsQuery->where('category', $category);
+            $anonymousQuery->where('category', $category);
         }
 
-        // ===== TAG FILTER =====
-        if ($tagSlug = $request->input('tagSlug')) {
-            $query->whereHas('tags', function ($q) use ($tagSlug) {
+        // ===== FILTERS FOR VERIFIED USERS' POSTS =====
+        if ($tagSlug = $request->input('tag')) {
+            $postsQuery->whereHas('tags', function ($q) use ($tagSlug) {
                 $q->where('slug', $tagSlug);
             });
+            $anonymousQuery->whereRaw('1 = 0');
         }
 
-        // ===== AUTHOR FILTER =====
         if ($authorID = $request->input('author')) {
-            $query->where('user_id', $authorID);
+            $postsQuery->where('user_id', $authorID);
+            $anonymousQuery->whereRaw('1 = 0');
         }
 
-        // ===== STATUS FILTER (LOGGED IN) =====
-        if ($request->user() && $status = $request->input('status')) {
-            $query->where(function ($q) use ($status, $request) {
+        if ($user && $status = $request->input('status')) {
+            $postsQuery->where(function ($q) use ($status, $user) {
                 if ($status === 'draft') {
                     $q->where('status', 'draft')
-                        ->where('user_id', $request->user()->id);
+                        ->where('user_id', $user->id);
                 } else {
                     $q->where('status', $status);
                 }
             });
+            $anonymousQuery->whereRaw('1 = 0');
         }
+
+        // ===== Get Posts, and put together =====
+        $regularPosts = $postsQuery->latest()->get();
+        $anonymousPosts = $anonymousQuery->latest()->get();
+
+        // Oznacz typ, żeby widok wiedział, jak renderować
+        $regularPosts->each(fn($p) => $p->source = 'post');
+        $anonymousPosts->each(fn($p) => $p->source = 'anonymous');
+
+        $allPosts = $regularPosts->concat($anonymousPosts);
 
         // ===== SORTING =====
         $sort = $request->input('sort', 'latest');
-        match ($sort) {
-            'oldest' => $query->orderBy('created_at', 'ASC'),
-            'title' => $query->orderBy('title', 'ASC'),
-            'popular' => $query->withCount('interactions')
-                ->orderByDesc('interactions_count'),
-            default => $query->orderByDesc('published_at')
-                ->orderByDesc('created_at'),
+        $allPosts = match ($sort) {
+            'oldest' => $allPosts->sortBy('created_at'),
+            'title'  => $allPosts->sortBy('title', SORT_NATURAL | SORT_FLAG_CASE),
+            // 'popular' wymagałoby interactions_count dla obu typów – pomijamy
+            default  => $allPosts->sortByDesc(fn($p) => $p->published_at ?? $p->created_at),
         };
 
-        $posts = $query->paginate(9)->withQueryString();
+        // ===== Pagination =====
+        $perPage = 9;
+        $page = max(1, (int) $request->input('page', 1));
+        $allPosts = $allPosts->values();
+        $total = $allPosts->count();
+
+        $posts = new \Illuminate\Pagination\LengthAwarePaginator(
+            $allPosts->forPage($page, $perPage)->values(),
+            $total,
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->except('page')]
+        );
 
         // ============================================
         // DANE POMOCNICZE DLA WIDOKU
@@ -145,7 +180,7 @@ class PostController extends Controller
 
         // Ustaw published_at jeśli publikujemy
         if ($data['status'] === Post::STATUS_PUBLISHED) {
-            $data['published_at'] = $data['published_at'] ?? now();
+            // $data['published_at'] = $data['published_at'] ?? now();
         }
 
         try {
@@ -166,7 +201,7 @@ class PostController extends Controller
                 ->with('success', 'Post został utworzony pomyślnie! Wymaga teraz akceptacji przez moderację.');
         } catch (\Exception $e) {
             Log::error("Post creation failed", [
-                'user_id' => $request->user->id,
+                'user_id' => $request->user()?->id,
                 'error' => $e->getMessage(),
             ]);
 

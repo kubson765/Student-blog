@@ -12,6 +12,7 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\AnonymousPostController;
 
 
 // Public routes
@@ -133,13 +134,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Moderation routes
 Route::middleware(['auth', 'verified'])->prefix('moderation')->group(function () {
     Route::get('/', [ModerationController::class, 'index'])->name('moderation.index');
+    Route::get('/reports', [ModerationController::class, 'reports'])->name('moderation.reports');
     Route::get('/{type}/{id}', [ModerationController::class, 'show'])->name('moderation.show');
 
     Route::post('/{type}/{id}/approve', [ModerationController::class, 'approve'])->name('moderation.approve');
     Route::post('/{type}/{id}/reject', [ModerationController::class, 'reject'])->name('moderation.reject');
-    Route::post('/{type}/{id}/spam', [ModerationController::class, 'spam'])->name('moderation.spam');
-    Route::post('/{type}/{id}/escalate', [ModerationController::class, 'escalate'])->name('moderation.escalate');
     Route::get('/{type}/{id}/history', [ModerationController::class, 'history'])->name('moderation.history');
+
+    Route::post('/reports/{report}/resolve', [ModerationController::class, 'resolveReport'])->name('moderation.reports.resolve');
+    Route::post('/reports/{report}/dismiss', [ModerationController::class, 'dismissReport'])->name('moderation.reports.dismiss');
 });
 
 // Admin routes
@@ -147,8 +150,20 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/moderation/audit', [\App\Http\Controllers\Admin\ModerationAuditController::class, 'index'])
         ->name('admin.moderation.audit');
 });
+Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])
+        ->name('admin.dashboard');
+});
 
 // Report routes
 Route::post('/report/{type}/{id}', [ReportController::class, 'store'])
     ->name('report.store')
     ->middleware('throttle:10,60'); // 10 reports per hour per IP
+
+
+// Anonymous post routes
+Route::get('/posts/anonymous/create', [AnonymousPostController::class, 'create'])
+    ->name('posts.anonymous.create');
+Route::post('/posts/anonymous', [AnonymousPostController::class, 'store'])
+    ->middleware('throttle:anonymous-posts')
+    ->name('posts.anonymous.store');
