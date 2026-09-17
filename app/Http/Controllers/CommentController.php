@@ -25,7 +25,19 @@ class CommentController extends Controller
         $comments = $post->comments()
             ->root()
             ->approved()
-            ->with(['user', 'replies.user'])
+            ->with([
+                'user',
+                'replies' => function ($query) {
+                    $query->where('moderation_status', 'approved')
+                        ->with('user')
+                        ->latest();
+                },
+                'replies.replies' => function ($query) {
+                    $query->where('moderation_status', 'approved')
+                        ->with('user')
+                        ->latest();
+                },
+            ])
             ->latest()
             ->paginate(20);
 
@@ -41,7 +53,7 @@ class CommentController extends Controller
         $data['post_id'] = $post->id;
         $data['user_id'] = $request->user()->id;
 
-        // Jeśli to odpowiedź, sprawdź czy parent należy do tego samego posta
+        // Check parent
         if (!empty($data['parent_id'])) {
             $parent = Comment::find($data['parent_id']);
             if (!$parent || $parent->post_id !== $post->id) {

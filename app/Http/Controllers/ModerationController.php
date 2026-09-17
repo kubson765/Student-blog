@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AnonymousPost;
 use App\Models\Post;
+use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -29,6 +30,10 @@ class ModerationController extends Controller
                 ->with('user')
                 ->oldest()
                 ->paginate(20),
+            'comments' => Comment::where('moderation_status', 'pending')
+                ->with(['user', 'post'])
+                ->oldest()
+                ->paginate(20),
             default => AnonymousPost::where('moderation_status', 'pending')
                 ->oldest()
                 ->paginate(20),
@@ -38,6 +43,7 @@ class ModerationController extends Controller
             'pending_anonymous' => AnonymousPost::where('moderation_status', 'pending')->count(),
             'pending_posts' => Post::where('moderation_status', 'pending')->count(),
             'pending_reports' => \App\Models\Report::where('status', 'pending')->count(),
+            'pending_comments' => Comment::where('moderation_status', 'pending')->count(),
         ];
 
         return view('moderation.index', compact('items', 'type', 'stats'));
@@ -62,24 +68,29 @@ class ModerationController extends Controller
         $this->authorize('approve', $post);
 
         $request->validate([
-            'reason' => 'required|string|min:10|max:500',
+            'reason' => 'required|string|max:500',
         ]);
 
-        DB::transaction(function () use ($post, $request) {
-            $post->update([
+        DB::transaction(function () use ($post, $request, $type) {
+            $data = [
                 'moderation_status' => 'approved',
                 'moderation_reason' => $request->reason,
                 'moderated_at' => now(),
                 'moderated_by' => auth()->id(),
-                'published_at' => $post->published_at ?? now(),
-            ]);
+            ];
+
+            if (in_array($type, ['posts', 'anonymous'])) {
+                $data['published_at'] = $post->published_at ?? now();
+            }
+
+            $post->update($data);
 
             $post->logModerationAction(auth()->user(), 'approve', $request->reason);
         });
 
         return redirect()
             ->route('moderation.index', ['type' => $type])
-            ->with('success', 'Post zaakceptowany.');
+            ->with('success', 'Zaakceptowano.');
     }
 
     /**
@@ -115,6 +126,7 @@ class ModerationController extends Controller
         return match ($type) {
             'anonymous' => AnonymousPost::findOrFail($id),
             'posts' => Post::findOrFail($id),
+            'comments' => Comment::findOrFail($id),
             default => abort(404),
         };
     }

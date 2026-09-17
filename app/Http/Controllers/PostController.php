@@ -183,13 +183,20 @@ class PostController extends Controller
     {
         $this->authorize('view', $post);
 
-        if (!$post->isVisible() && auth()->id() !== $post->user_id && auth()->role() == 'user') {
-            abort(404);
-        }
+        $comments = $post->comments()
+            ->root()
+            ->approved()
+            ->with([
+                'user',
+                'replies' => fn($q) => $q->where('moderation_status', 'approved')->with('user')->latest(),
+                'replies.replies' => fn($q) => $q->where('moderation_status', 'approved')->with('user')->latest(),
+            ])
+            ->latest()
+            ->paginate(20);
 
-        $post->load(['user', 'tags', 'comments.user']);
+        $post->load(['user', 'tags']);
 
-        return view('posts.show', compact('post'));
+        return view('posts.show', compact('post', 'comments'));
     }
 
     /**

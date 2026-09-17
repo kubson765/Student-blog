@@ -20,6 +20,15 @@
                         </h5>
                     </div>
                     <div class="card-body">
+                        @if ($type === 'comments')
+                            <div class="mb-3">
+                                <small class="text-muted">Komentarz do posta:</small>
+                                <a href="{{ route('posts.show', $post->post) }}" target="_blank">
+                                    {{ $post->post->title }}
+                                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                </a>
+                            </div>
+                        @endif
                         <div class="mb-3 text-muted small">
                             <i class="bi bi-clock me-1"></i>
                             Utworzono: {{ $post->created_at->format('Y-m-d H:i:s') }}
@@ -28,7 +37,7 @@
                                 Fingerprint: <code>{{ substr($post->fingerprint, 0, 16) }}...</code>
                             @else
                                 <i class="bi bi-person-circle me-1"></i>
-                                Autor: {{ $post->author_name }}
+                                Autor: {{ $post->user?->name ?? 'Nieznany' }}
                             @endif
                         </div>
 
@@ -52,7 +61,7 @@
                             @csrf
                             <div class="mb-3">
                                 <label class="form-label small">Powód akceptacji</label>
-                                <textarea name="reason" class="form-control form-control-sm" rows="3" minlength="10" maxlength="500" required
+                                <textarea name="reason" class="form-control form-control-sm" rows="3" minlength="0" maxlength="500" required
                                     placeholder="Np. Treść zgodna z regulaminem, wartościowa wypowiedź"></textarea>
                             </div>
                             <button type="submit" class="btn btn-success w-100">
@@ -128,12 +137,12 @@
                         </form>
                     </div>
                 </div> --}}
-                <div class="mt-3">
+                {{-- <div class="mt-3">
                     <a href="{{ route('moderation.history', ['type' => $type, 'id' => $post->id]) }}"
                         class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-clock-history me-1"></i>Historia moderacji
                     </a>
-                </div>
+                </div> --}}
             </div>
         </div>
     </div>

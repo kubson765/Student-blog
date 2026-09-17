@@ -20,6 +20,14 @@ class StoreCommentRequest extends FormRequest
                 'nullable',
                 'integer',
                 'exists:comments,id',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $parent = \App\Models\Comment::find($value);
+                        if ($parent && !$parent->canHaveReplies()) {
+                            $fail('Osiągnięto maksymalny poziom zagnieżdżenia.');
+                        }
+                    }
+                },
             ],
         ];
     }

@@ -123,34 +123,14 @@
                     @endauth
                 </article>
 
-                <!-- Comments section (placeholder na przyszłość) -->
-                <div class="card shadow-sm mt-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">
-                            <i class="bi bi-chat-dots me-2"></i>
-                            Comments ({{ $post->comments->count() ?? 0 }})
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        @if (isset($post->comments) && $post->comments->count() > 0)
-                            @foreach ($post->comments as $comment)
-                                <div class="mb-3 pb-3 border-bottom">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <strong>{{ $comment->author_name }}</strong>
-                                        <small class="text-muted ms-2">
-                                            {{ $comment->created_at->diffForHumans() }}
-                                        </small>
-                                    </div>
-                                    <p class="mb-0">{{ $comment->content }}</p>
-                                </div>
-                            @endforeach
-                        @else
-                            <p class="text-muted text-center py-3">
-                                <i class="bi bi-chat-square-text display-6 d-block mb-2"></i>
-                                No comments yet. Be the first to share your thoughts!
-                            </p>
-                        @endif
-                    </div>
+                <!-- Comments section -->
+                <div class="mt-5">
+                    @include('comments.index', [
+                        'post' => $post,
+                        'comments' =>
+                            $comments ??
+                            $post->comments()->root()->approved()->with(['user', 'replies.user'])->latest()->paginate(20),
+                    ])
                 </div>
 
                 <!-- Back to list -->

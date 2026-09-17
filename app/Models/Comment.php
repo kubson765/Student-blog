@@ -128,11 +128,34 @@ class Comment extends Model
             && $this->created_at->diffInMinutes(now()) <= 15;
     }
 
-    /**
-     * Czy komentarz jest widoczny publicznie?
-     */
     public function isVisible(): bool
     {
         return $this->moderation_status === 'approved';
+    }
+
+    /**
+     * Poziom zagnieżdżenia (0 = root, 1 = odpowiedź, 2 = odpowiedź na odpowiedź)
+     */
+    public function getDepthAttribute(): int
+    {
+        $depth = 0;
+        $parent = $this->parent;
+
+        while ($parent) {
+            $depth++;
+            $parent = $parent->parent;
+        }
+
+        return $depth;
+    }
+
+    /**
+     * Maksymalny poziom zagnieżdżenia
+     */
+    const MAX_DEPTH = 3;  // 0 - root, 1, 2, ...
+
+    public function canHaveReplies(): bool
+    {
+        return $this->depth < self::MAX_DEPTH;
     }
 }
