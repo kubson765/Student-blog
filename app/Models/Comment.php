@@ -78,6 +78,22 @@ class Comment extends Model
         return $this->morphMany(Interaction::class, 'interactable');
     }
 
+    public function upvotes(): MorphMany
+    {
+        return $this->morphMany(Interaction::class, 'interactable')
+            ->where('type', 'upvote');
+    }
+
+    public function downvotes(): MorphMany
+    {
+        return $this->morphMany(Interaction::class, 'interactable')
+            ->where('type', 'downvote');
+    }
+
+    public function getScoreAttribute(): int
+    {
+        return $this->upvotes()->count() - $this->downvotes()->count();
+    }
     // ============================================
     // SCOPES
     // ============================================

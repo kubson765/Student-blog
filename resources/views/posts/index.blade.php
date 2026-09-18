@@ -86,6 +86,7 @@
                                 <i class="bi bi-sort-down me-1"></i>Sortuj
                             </label>
                             <select class="form-select" id="sort" name="sort">
+                                <option value="popular" @selected(($activeFilters['sort'] ?? '') === 'popular')>Popularne</option>
                                 <option value="latest" @selected(($activeFilters['sort'] ?? 'latest') === 'latest')>Najnowsze</option>
                                 <option value="oldest" @selected(($activeFilters['sort'] ?? '') === 'oldest')>Najstarsze</option>
                                 <option value="title" @selected(($activeFilters['sort'] ?? '') === 'title')>Tytuł (A-Z)</option>
@@ -236,7 +237,14 @@
                                         @endif
                                     </div>
                                 @endif
-
+                                {{-- Post community score  --}}
+                                @if (($post->source ?? 'post') === 'post')
+                                    <div
+                                        class="mt-2 d-flex justify-content-between align-items-center position-relative z-2">
+                                        <x-vote-buttons type="post" :id="$post->id" :score="$post->vote_score ?? 0"
+                                            :user-vote="$post->user_vote ?? null" size="sm" />
+                                    </div>
+                                @endif
                                 {{-- Meta --}}
                                 <div
                                     class="d-flex justify-content-between align-items-center small text-muted mt-auto pt-3 border-top">

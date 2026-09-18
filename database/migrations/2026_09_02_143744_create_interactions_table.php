@@ -10,22 +10,22 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-{
-    Schema::create('interactions', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+    {
+        Schema::create('interactions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
 
-        // Pola pod relację polimorficzną (interactable_type i interactable_id)
-        $table->morphs('interactable');
+            // Pola pod relację polimorficzną (interactable_type i interactable_id)
+            $table->morphs('interactable');
 
-        $table->string('type'); // np. 'like', 'bookmark', 'rating'
-        $table->integer('value')->nullable(); // opcjonalna wartość, np. ocena 1-5
-        $table->timestamps();
+            $table->string('type'); // np. 'like', 'bookmark', 'rating'
+            $table->integer('value')->nullable();
+            $table->timestamps();
 
-        // Jeden użytkownik może dać tylko jedną interakcję danego typu do konkretnego obiektu
-        $table->unique(['user_id', 'interactable_type', 'interactable_id', 'type'], 'user_interaction_unique');
-    });
-}
+            // Jeden użytkownik może dać tylko jedną interakcję danego typu do konkretnego obiektu
+            $table->unique(['user_id', 'interactable_type', 'interactable_id', 'type'], 'interactions_unique');
+        });
+    }
 
     /**
      * Reverse the migrations.

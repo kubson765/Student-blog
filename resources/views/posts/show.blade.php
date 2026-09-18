@@ -107,6 +107,11 @@
                                 </div>
                             </div>
                         @endif
+                        {{-- community votes score  --}}
+                        <div class="d-flex justify-content-end my-4">
+                            <x-vote-buttons type="post" :id="$post->id" :score="$post->vote_score ?? 0" :user-vote="$post->user_vote ?? null"
+                                size="sm" layout="horizontal" />
+                        </div>
                     </div>
 
                     <!-- Author actions -->

@@ -8,10 +8,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-#[Fillable(['user_id', 'interactable_type', 'interactable_id', 'type', 'value'])]
 class Interaction extends Model
 {
     use HasFactory;
+
+    protected $fillable = [
+        'user_id',
+        'interactable_type',
+        'interactable_id',
+        'type',
+        'value',
+    ];
 
     /**
      * Użytkownik, który wszedł w interakcję.
@@ -27,5 +34,24 @@ class Interaction extends Model
     public function interactable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    // ============================================
+    // SCOPES
+    // ============================================
+
+    public function scopeUpvotes($query)
+    {
+        return $query->where('type', 'upvote');
+    }
+
+    public function scopeDownvotes($query)
+    {
+        return $query->where('type', 'downvote');
+    }
+
+    public function scopeOfType($query, string $type)
+    {
+        return $query->where('type', $type);
     }
 }

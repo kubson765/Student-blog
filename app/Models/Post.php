@@ -76,6 +76,18 @@ class Post extends Model
         return $this->morphMany(Interaction::class, 'interactable');
     }
 
+    public function upvotes(): MorphMany
+    {
+        return $this->morphMany(Interaction::class, 'interactable')
+            ->where('type', 'upvote');
+    }
+
+    public function downvotes(): MorphMany
+    {
+        return $this->morphMany(Interaction::class, 'interactable')
+            ->where('type', 'downvote');
+    }
+
      // ============================================
     // SCOPES - gotowe zapytania
     // ============================================
@@ -217,6 +229,33 @@ class Post extends Model
     public function getAuthorAvatarAttribute(): ?string
     {
         return $this->user?->avatar ?? null;
+    }
+
+    /**
+     * Score = upvotes - downvotes
+     */
+    public function getScoreAttribute(): int
+    {
+        $upvotes = $this->upvotes()->count();
+        $downvotes = $this->downvotes()->count();
+        return $upvotes - $downvotes;
+    }
+
+    /**
+     * Głos zalogowanego użytkownika (lub null)
+     */
+    public function getUserVoteAttribute(): ?string
+    {
+        if (!auth()->check()) {
+            return null;
+        }
+
+        $interaction = $this->interactions()
+            ->where('user_id', auth()->id())
+            ->whereIn('type', ['upvote', 'downvote'])
+            ->first();
+
+        return $interaction?->type;
     }
 
     // ============================================

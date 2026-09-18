@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCommentRequest;
 use App\Models\Comment;
 use App\Models\Post;
+use App\Models\Interaction;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +21,9 @@ class CommentController extends Controller
     /**
      * Lista komentarzy dla posta (AJAX lub redirect)
      */
-    public function index(Post $post)
+    public function index(Post $post, Request $request)
     {
+        $user = $request->user();
         $comments = $post->comments()
             ->root()
             ->approved()
@@ -40,6 +42,47 @@ class CommentController extends Controller
             ])
             ->latest()
             ->paginate(20);
+
+        $allCommentIds = $comments->flatMap(function ($comment) {
+            return collect([$comment->id])
+                ->concat($comment->replies->pluck('id'))
+                ->concat($comment->replies->flatMap->replies->pluck('id'));
+        })->unique()->filter()->toArray();
+
+        if (empty($allCommentIds)) {
+            return view('comments.index', compact('post', 'comments'));
+        }
+
+        $voteCounts = Interaction::where('interactable_type', Comment::class)
+            ->whereIn('interactable_id', $allCommentIds)
+            ->whereIn('type', ['upvote', 'downvote'])
+            ->selectRaw('interactable_id, type, COUNT(*) as count')
+            ->groupBy('interactable_id', 'type')
+            ->get()
+            ->groupBy('interactable_id');
+
+        $userVotes = [];
+        if ($user) {
+            $userVotes = Interaction::where('user_id', $user->id)
+                ->where('interactable_type', Comment::class)
+                ->whereIn('interactable_id', $allCommentIds)
+                ->whereIn('type', ['upvote', 'downvote'])
+                ->pluck('type', 'interactable_id')
+                ->toArray();
+        }
+
+        $attachVotes = function ($comment) use (&$attachVotes, $voteCounts, $userVotes) {
+            $upvotes = $voteCounts->get($comment->id)?->firstWhere('type', 'upvote')?->count ?? 0;
+            $downvotes = $voteCounts->get($comment->id)?->firstWhere('type', 'downvote')?->count ?? 0;
+
+            $comment->vote_score = $upvotes - $downvotes;
+            $comment->user_vote = $userVotes[$comment->id] ?? null;
+            if ($comment->relationLoaded('replies')) {
+                $comment->replies->each($attachVotes);
+            }
+        };
+
+        $comments->each($attachVotes);
 
         return view('comments.index', compact('post', 'comments'));
     }

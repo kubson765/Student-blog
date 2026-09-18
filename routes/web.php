@@ -13,6 +13,7 @@ use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\AnonymousPostController;
+use App\Http\Controllers\VoteController;
 
 
 // Public routes
@@ -92,6 +93,15 @@ Route::middleware('auth')->group(function () {
             ->name('email.change');
         Route::post('change-email', [App\Http\Controllers\Auth\EmailChangeController::class, 'update'])
             ->name('email.update');
+
+        // Voting
+        Route::post('/vote/{type}/{id}/up', [VoteController::class, 'upvote'])
+            ->middleware('throttle:60,1')  // 60 głosów na minutę
+            ->name('vote.up');
+
+        Route::post('/vote/{type}/{id}/down', [VoteController::class, 'downvote'])
+            ->middleware('throttle:60,1')
+            ->name('vote.down');
     });
 });
 
