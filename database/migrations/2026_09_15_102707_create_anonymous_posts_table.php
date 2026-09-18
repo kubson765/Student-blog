@@ -17,7 +17,8 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('content');
             $table->string('category')->default('Ogólne');
-
+            $table->string('status')->default('draft');
+            $table->string('moderation_status')->default('pending');
             // Fingerprint (hash IP + User-Agent + secret)
             $table->string('fingerprint')->nullable()->index();
 
