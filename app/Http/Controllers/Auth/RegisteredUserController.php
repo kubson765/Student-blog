@@ -43,7 +43,7 @@ class RegisteredUserController extends Controller
             event(new Registered($user));
             Auth::login($user);
 
-            return redirect()->routde('verification.notice');
+            return redirect()->route('verification.notice');
         } catch (\Exception $e) {
             Log::error('Registration failed', ['error' => $e->getMessage()]);
             return back()->withInput()->withErrors(['general' => 'Registration failed. Please try again']);

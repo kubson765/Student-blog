@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\User;
+use App\Models\AnonymousPost;
 
 // app/Policies/AnonymousPostPolicy.php
 class AnonymousPostPolicy
