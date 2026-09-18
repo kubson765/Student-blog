@@ -7,6 +7,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -39,5 +40,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('anonymous-posts', function (Request $request) {
             return Limit::perHour(10)->by($request->ip());
         });
+
+        Paginator::useBootstrapFive();
     }
 }
