@@ -1,26 +1,30 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ModerationAuditController;
+use App\Http\Controllers\AnonymousPostController;
+use App\Http\Controllers\Auth\AccountDeletionController;
+use App\Http\Controllers\Auth\EmailChangeController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordChangeController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\FilterPresetController;
+use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\VoteController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Auth\LogoutController;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\NewPasswordController;
-use App\Http\Controllers\PostController;
-use App\Http\Controllers\ModerationController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\CommentController;
-use App\Http\Controllers\AnonymousPostController;
-use App\Http\Controllers\VoteController;
-
+use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
-
 
 // Guest routes (Account-related)
 Route::middleware('guest')->group(function () {
@@ -60,20 +64,28 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
         $request->fulfill();
+
         return redirect()->route('dashboard');
     })->middleware('signed')->name('verification.verify');
 
     Route::post('/email/verification-notification', function (Request $request) {
         $request->user()->sendEmailVerificationNotification();
+
         return back()->with('status', 'verification-link-sent');
     })->middleware('throttle:6,1')->name('verification.send');
 
     Route::post('logout', [LogoutController::class, 'logout'])->name('logout');
 
+    // Saved filter presets
+    Route::post('/filter-presets', [FilterPresetController::class, 'store'])
+        ->name('filter-presets.store');
+    Route::delete('/filter-presets/{filterPreset}', [FilterPresetController::class, 'destroy'])
+        ->name('filter-presets.destroy');
+
     // Delete Account
-    Route::get('delete-account', [App\Http\Controllers\Auth\AccountDeletionController::class, 'edit'])
+    Route::get('delete-account', [AccountDeletionController::class, 'edit'])
         ->name('account.delete');
-    Route::delete('delete-account', [App\Http\Controllers\Auth\AccountDeletionController::class, 'destroy'])
+    Route::delete('delete-account', [AccountDeletionController::class, 'destroy'])
         ->name('account.destroy');
 
     // Protected routes (require verified email)
@@ -83,15 +95,15 @@ Route::middleware('auth')->group(function () {
         })->name('dashboard');
 
         // Change Password
-        Route::get('change-password', [App\Http\Controllers\Auth\PasswordChangeController::class, 'edit'])
+        Route::get('change-password', [PasswordChangeController::class, 'edit'])
             ->name('password.change');
-        Route::post('change-password', [App\Http\Controllers\Auth\PasswordChangeController::class, 'update'])
+        Route::post('change-password', [PasswordChangeController::class, 'update'])
             ->name('password.update');
 
         // Change email
-        Route::get('change-email', [App\Http\Controllers\Auth\EmailChangeController::class, 'edit'])
+        Route::get('change-email', [EmailChangeController::class, 'edit'])
             ->name('email.change');
-        Route::post('change-email', [App\Http\Controllers\Auth\EmailChangeController::class, 'update'])
+        Route::post('change-email', [EmailChangeController::class, 'update'])
             ->name('email.update');
 
         // Voting
@@ -104,7 +116,6 @@ Route::middleware('auth')->group(function () {
             ->name('vote.down');
     });
 });
-
 
 // ============================================
 // POSTS ROUTES (in order (.show last))
@@ -123,6 +134,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Wildcard NA KOŃCU
+Route::get('/anonymous/{anonymousPost}', [AnonymousPostController::class, 'show'])
+    ->name('anonymous.show');
 Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
 
 // ============================================
@@ -131,6 +144,8 @@ Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show')
 
 // Public
 Route::get('/posts/{post}/comments', [CommentController::class, 'index'])->name('comments.index');
+// Route::get('/anonymous/{anonymousPost}/comments', [CommentController::class, 'index'])
+//     ->name('anonymous.show');
 
 // logged in
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -139,7 +154,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/comments/{comment}', [CommentController::class, 'update'])->name('comments.update');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 });
-
 
 // Moderation routes
 Route::middleware(['auth', 'verified'])->prefix('moderation')->group(function () {
@@ -157,11 +171,11 @@ Route::middleware(['auth', 'verified'])->prefix('moderation')->group(function ()
 
 // Admin routes
 Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
-    Route::get('/moderation/audit', [\App\Http\Controllers\Admin\ModerationAuditController::class, 'index'])
+    Route::get('/moderation/audit', [ModerationAuditController::class, 'index'])
         ->name('admin.moderation.audit');
 });
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->group(function () {
-    Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])
+    Route::get('/', [DashboardController::class, 'index'])
         ->name('admin.dashboard');
 });
 
@@ -169,7 +183,6 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->group(functio
 Route::post('/report/{type}/{id}', [ReportController::class, 'store'])
     ->name('report.store')
     ->middleware('throttle:10,60'); // 10 reports per hour per IP
-
 
 // Anonymous post routes
 Route::get('/posts/anonymous/create', [AnonymousPostController::class, 'create'])
