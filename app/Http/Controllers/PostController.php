@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Post;
-use App\Models\Tag;
-use App\Models\Interaction;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
 use App\Models\AnonymousPost;
+use App\Models\FilterPreset;
+use App\Models\Interaction;
+use App\Models\Post;
+use App\Models\Tag;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 
 class PostController extends Controller
 {
@@ -62,7 +65,6 @@ class PostController extends Controller
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
 
-
         // ===== SEARCH =====
         if ($search = $request->input('search')) {
             $postsQuery->where(function ($q) use ($search) {
@@ -82,11 +84,17 @@ class PostController extends Controller
             $anonymousQuery->where('category', $category);
         }
 
-        // ===== FILTERS FOR VERIFIED USERS' POSTS =====
-        if ($tagSlug = $request->input('tag')) {
-            $postsQuery->whereHas('tags', function ($q) use ($tagSlug) {
-                $q->where('slug', $tagSlug);
-            });
+        // ===== TAG FILTER (AND: a post must have every selected tag) =====
+        $tagSlugs = array_values(array_slice(array_unique(array_filter(
+            (array) $request->input('tags', []),
+            static fn (mixed $slug): bool => is_string($slug) && $slug !== '',
+        )), 0, 20));
+
+        if ($tagSlugs !== []) {
+            foreach ($tagSlugs as $tagSlug) {
+                $postsQuery->whereHas('tags', fn (Builder $query) => $query->where('slug', $tagSlug));
+            }
+
             $anonymousQuery->whereRaw('1 = 0');
         }
 
@@ -136,8 +144,8 @@ class PostController extends Controller
         $regularPosts = $postsQuery->get();
         $anonymousPosts = $anonymousQuery->get();
 
-        $regularPosts->each(fn($p) => $p->source = 'post');
-        $anonymousPosts->each(fn($p) => $p->source = 'anonymous');
+        $regularPosts->each(fn ($p) => $p->source = 'post');
+        $anonymousPosts->each(fn ($p) => $p->source = 'anonymous');
 
         $allPosts = $regularPosts->concat($anonymousPosts);
 
@@ -148,8 +156,8 @@ class PostController extends Controller
         $allPosts = match ($sort) {
             'oldest' => $allPosts->sortBy('created_at'),
             'title' => $allPosts->sortBy('title', SORT_NATURAL | SORT_FLAG_CASE),
-            'popular' => $allPosts->sortByDesc(fn($p) => $p->vote_score ?? 0),
-            default => $allPosts->sortByDesc(fn($p) => $p->published_at ?? $p->created_at),
+            'popular' => $allPosts->sortByDesc(fn ($p) => $p->vote_score ?? 0),
+            default => $allPosts->sortByDesc(fn ($p) => $p->published_at ?? $p->created_at),
         };
 
         // ============================================
@@ -202,7 +210,7 @@ class PostController extends Controller
         $page = max(1, (int) $request->input('page', 1));
         $allPosts = $allPosts->values(); // reset kluczy
 
-        $posts = new \Illuminate\Pagination\LengthAwarePaginator(
+        $posts = new LengthAwarePaginator(
             $allPosts->forPage($page, $perPage)->values(),
             $allPosts->count(),
             $perPage,
@@ -246,16 +254,31 @@ class PostController extends Controller
         // DANE POMOCNICZE DLA WIDOKU
         // ============================================
         $categories = $this->categories;
-        $tags = Tag::withCount('posts')
+        $tags = Tag::withCount([
+            'posts' => function (Builder $query) {
+                $query->where('status', Post::STATUS_PUBLISHED)
+                    ->where('moderation_status', 'approved')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+            },
+        ])
+            ->orderByDesc('posts_count')
             ->orderBy('name')
             ->get();
-        $activeFilters = $request->only(['search', 'category', 'tag', 'author', 'status', 'sort']);
+
+        $activeFilters = array_filter(
+            $request->only(FilterPreset::FILTER_KEYS),
+            static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== [],
+        );
+        $activeFilters['tags'] = $tagSlugs;
+        $filterPresets = $user?->filterPresets()->orderBy('name')->get() ?? collect();
 
         return view('posts.index', compact(
             'posts',
             'categories',
             'tags',
-            'activeFilters'
+            'activeFilters',
+            'filterPresets',
         ));
     }
 
@@ -267,7 +290,8 @@ class PostController extends Controller
         $this->authorize('create', Post::class);
 
         $categories = $this->categories;
-        $tags = \App\Models\Tag::orderBy('name')->get();
+        $tags = Tag::orderBy('name')->get();
+
         return view('posts.create', compact('categories', 'tags'));
     }
 
@@ -292,7 +316,7 @@ class PostController extends Controller
                 $post = Post::create($data);
 
                 // tags (if exist)
-                if (!empty($data['tags'])) {
+                if (! empty($data['tags'])) {
                     $post->tags()->sync($data['tags']);
                 }
 
@@ -303,14 +327,14 @@ class PostController extends Controller
                 ->route('posts.show', $post)
                 ->with('success', 'Post został utworzony pomyślnie! Wymaga teraz akceptacji przez moderację.');
         } catch (\Exception $e) {
-            Log::error("Post creation failed", [
+            Log::error('Post creation failed', [
                 'user_id' => $request->user()?->id,
                 'error' => $e->getMessage(),
             ]);
 
             return back()
                 ->withInput()
-                ->withErrors(['general' => "Could not create post. Try again"]);
+                ->withErrors(['general' => 'Could not create post. Try again']);
         }
     }
 
@@ -326,8 +350,8 @@ class PostController extends Controller
             ->approved()
             ->with([
                 'user',
-                'replies' => fn($q) => $q->where('moderation_status', 'approved')->with('user')->latest(),
-                'replies.replies' => fn($q) => $q->where('moderation_status', 'approved')->with('user')->latest(),
+                'replies' => fn ($q) => $q->where('moderation_status', 'approved')->with('user')->latest(),
+                'replies.replies' => fn ($q) => $q->where('moderation_status', 'approved')->with('user')->latest(),
             ])
             ->latest()
             ->paginate(20);
@@ -366,7 +390,8 @@ class PostController extends Controller
         $this->authorize('update', $post);
 
         $categories = $this->categories;
-        $tags = \App\Models\Tag::orderBy('name')->get();
+        $tags = Tag::orderBy('name')->get();
+
         return view('posts.edit', compact('post', 'categories', 'tags'));
     }
 
@@ -377,7 +402,7 @@ class PostController extends Controller
     {
         $data = $request->validated();
 
-        if ($data['status'] === Post::STATUS_PUBLISHED && !$post->published_at) {
+        if ($data['status'] === Post::STATUS_PUBLISHED && ! $post->published_at) {
             $data['published_at'] = $data['published_at'] ?? now();
         }
 

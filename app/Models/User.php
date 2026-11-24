@@ -2,17 +2,16 @@
 
 namespace App\Models;
 
-use Laravel\Sanctum\HasApiTokens;
+use App\Notifications\ResetPassword;
+use App\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Notifications\VerifyEmail;
-use App\Notifications\ResetPassword;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -34,7 +33,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'remember_token',
     ];
 
-
     protected function casts(): array
     {
         return [
@@ -45,7 +43,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function sendEmailVerificationNotification()
     {
-        $this->notify(new VerifyEmail());
+        $this->notify(new VerifyEmail);
     }
 
     public function sendPasswordResetNotification($token)
@@ -119,5 +117,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function interactions(): HasMany
     {
         return $this->hasMany(Interaction::class);
+    }
+
+    /**
+     * Zapisane zestawy filtrów listy wpisów.
+     */
+    public function filterPresets(): HasMany
+    {
+        return $this->hasMany(FilterPreset::class);
     }
 }

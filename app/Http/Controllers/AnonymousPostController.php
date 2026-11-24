@@ -5,14 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\AnonymousPost;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AnonymousPostController extends Controller
 {
     private const RATE_LIMIT_PER_HOUR = 3;
+
     private const SPAM_THRESHOLD_REJECT = 80;
 
     public function create(): View
@@ -46,7 +47,7 @@ class AnonymousPostController extends Controller
             return back()
                 ->withInput()
                 ->withErrors([
-                    'limit' => 'Możesz dodać maksymalnie ' . self::RATE_LIMIT_PER_HOUR . ' posty na godzinę. Spróbuj później.'
+                    'limit' => 'Możesz dodać maksymalnie '.self::RATE_LIMIT_PER_HOUR.' posty na godzinę. Spróbuj później.',
                 ]);
         }
 
@@ -59,8 +60,9 @@ class AnonymousPostController extends Controller
             Log::warning('Anonymous post XSS attempt', [
                 'fingerprint' => substr($fingerprint, 0, 16),
             ]);
+
             return back()->withErrors([
-                'content' => 'Treść zawiera niedozwolone elementy.'
+                'content' => 'Treść zawiera niedozwolone elementy.',
             ]);
         }
 
@@ -73,7 +75,7 @@ class AnonymousPostController extends Controller
         // ============================================
         // KROK 4: SPAM DETECTION
         // ============================================
-        $spamScore = $this->calculateSpamScore($title . ' ' . $content);
+        $spamScore = $this->calculateSpamScore($title.' '.$content);
 
         $moderationStatus = $spamScore >= self::SPAM_THRESHOLD_REJECT ? 'rejected' : 'pending';
 
@@ -89,12 +91,12 @@ class AnonymousPostController extends Controller
                 'category' => $validated['category'] ?? 'Ogólne',
                 'moderation_status' => $moderationStatus,
                 'moderation_reason' => $moderationStatus === 'rejected'
-                    ? 'Automatyczna detekcja spamu (score: ' . $spamScore . ')'
+                    ? 'Automatyczna detekcja spamu (score: '.$spamScore.')'
                     : null,
                 'moderated_at' => $moderationStatus === 'rejected' ? now() : null,
                 'fingerprint' => $fingerprint,
-                'ip_hash' => hash('sha256', $request->ip() . config('app.key')),
-                'user_agent_hash' => hash('sha256', $request->userAgent() . config('app.key')),
+                'ip_hash' => hash('sha256', $request->ip().config('app.key')),
+                'user_agent_hash' => hash('sha256', $request->userAgent().config('app.key')),
             ]);
 
             // ============================================
@@ -113,9 +115,34 @@ class AnonymousPostController extends Controller
                     ->with('info', 'Twój post został oznaczony jako spam i odrzucony.');
             }
         });
+
         return redirect()
             ->route('posts.index')
             ->with('success', 'Twój post został wysłany do moderacji. Pojawi się publicznie po akceptacji.');
+    }
+
+    /**
+     * Wyświetl pojedynczy anonimowy post
+     */
+    public function show(AnonymousPost $anonymousPost): View
+    {
+        // Route model binding użyje sluga (getRouteKeyName)
+        // Post musi być zaakceptowany i opublikowany
+        abort_unless(
+            $anonymousPost->moderation_status === 'approved'
+                && $anonymousPost->published_at !== null
+                && $anonymousPost->published_at->isPast(),
+            404
+        );
+
+        return view('posts.anonymous.show', [
+            'post' => $anonymousPost,
+        ]);
+    }
+
+    public function getShowRouteAttribute(): string
+    {
+        return route('anonymous.show', $this);
     }
 
     private function generateFingerprint(Request $request): string
@@ -125,8 +152,8 @@ class AnonymousPostController extends Controller
         // ale nie da się go odwrócić do IP
         return hash(
             'sha256',
-            $request->ip() . '|' .
-                $request->userAgent() . '|' .
+            $request->ip().'|'.
+                $request->userAgent().'|'.
                 config('app.key') // sekret, żeby nikt z zewnątrz nie mógł odtworzyć
         );
     }
@@ -167,7 +194,7 @@ class AnonymousPostController extends Controller
 
         foreach ($bannedWords as $word) {
             $content = preg_replace(
-                '/\b' . preg_quote($word, '/') . '\w*\b/iu',
+                '/\b'.preg_quote($word, '/').'\w*\b/iu',
                 str_repeat('*', mb_strlen($word)),
                 $content
             );
@@ -230,7 +257,7 @@ class AnonymousPostController extends Controller
         $counter = 1;
 
         while (AnonymousPost::where('slug', $slug)->exists()) {
-            $slug = $originalSlug . '-' . $counter;
+            $slug = $originalSlug.'-'.$counter;
             $counter++;
         }
 
